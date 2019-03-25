@@ -1,0 +1,1 @@
+docker exec -it -w /rmagick 4aa /bin/bash
