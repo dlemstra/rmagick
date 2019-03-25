@@ -47,7 +47,9 @@ module RMagick
       @headers = %w[assert.h ctype.h stdio.h stdlib.h math.h time.h]
       headers << 'sys/types.h' if have_header('sys/types.h')
 
-      if have_header('magick/MagickCore.h')
+      if have_header('MagickCore/MagickCore.h')
+        headers << 'MagickCore/MagickCore.h'
+      elsif have_header('magick/MagickCore.h')
         headers << 'magick/MagickCore.h'
       else
         exit_failure "Can't install RMagick #{RMAGICK_VERS}. Can't find magick/MagickCore.h."
@@ -88,7 +90,11 @@ module RMagick
 
       elsif RUBY_PLATFORM =~ /mingw/ # mingw
 
-        `identify -version` =~ /Version: ImageMagick (\d+\.\d+\.\d+)-+\d+ /
+        if find_executable 'magick'
+          `magick -version` =~ /Version: ImageMagick (\d+\.\d+\.\d+)-+\d+ /
+        else
+          `identify -version` =~ /Version: ImageMagick (\d+\.\d+\.\d+)-+\d+ /
+        end
         abort 'Unable to get ImageMagick version' unless Regexp.last_match(1)
         $magick_version = Regexp.last_match(1)
 
@@ -96,12 +102,16 @@ module RMagick
         $CPPFLAGS = %(-I"#{dir_paths[:include]}")
         $LDFLAGS = %(-L"#{dir_paths[:lib]}")
 
-        have_library('CORE_RL_magick_')
+        have_library(is_im7 ? 'CORE_RL_MagickCore_' : 'CORE_RL_magick_')
         have_library('X11')
 
       else # mswin
 
-        `identify -version` =~ /Version: ImageMagick (\d+\.\d+\.\d+)-+\d+ /
+        if find_executable 'magick'
+          `magick -version` =~ /Version: ImageMagick (\d+\.\d+\.\d+)-+\d+ /
+        else
+          `identify -version` =~ /Version: ImageMagick (\d+\.\d+\.\d+)-+\d+ /
+        end
         abort 'Unable to get ImageMagick version' unless Regexp.last_match(1)
         $magick_version = Regexp.last_match(1)
 
@@ -109,7 +119,7 @@ module RMagick
         $CPPFLAGS << %( -I"#{dir_paths[:include]}")
         $LDFLAGS << %( -libpath:"#{dir_paths[:lib]}")
 
-        $LOCAL_LIBS = 'CORE_RL_magick_.lib'
+        $LOCAL_LIBS = is_im7 ? 'CORE_RL_MagickCore_.lib' : 'CORE_RL_magick_.lib'
         have_library('X11')
 
       end
@@ -163,7 +173,7 @@ SRC
         exit_failure "Can't install RMagick #{RMAGICK_VERS}. Can't find pkg-config in #{ENV['PATH']}\n"
       end
 
-      packages = `pkg-config --list-all`.scan(/(ImageMagick\-6[\.A-Z0-9]+) .*/).flatten
+      packages = `pkg-config --list-all`.scan(/(ImageMagick\-[\.A-Z0-9]+) .*/).flatten
 
       # For ancient version of ImageMagick 6 we need a different regex
       if packages.empty?
@@ -172,6 +182,23 @@ SRC
 
       if packages.empty?
         exit_failure "Can't install RMagick #{RMAGICK_VERS}. Can't find ImageMagick with pkg-config\n"
+      end
+
+      if packages.length > 1
+
+        im7_packages = packages.select { |package| package.start_with?('ImageMagick-7') }
+
+        unless im7_packages.empty?
+          checking_for('forced use of ImageMagick 6') do
+            if ENV['USE_IMAGEMAGICK_6']
+              packages -= im7_packages
+              true
+            else
+              packages = im7_packages
+              false
+            end
+          end
+        end
       end
 
       if packages.length > 1
@@ -257,7 +284,7 @@ SRC
       paths = ENV['PATH'].split(File::PATH_SEPARATOR)
       paths.each do |dir|
         lib = File.join(dir, 'lib')
-        lib_file = File.join(lib, 'CORE_RL_magick_.lib')
+        lib_file = File.join(lib, is_im7 ? 'CORE_RL_MagickCore_.lib' : 'CORE_RL_magick_.lib')
         next unless File.exist?(lib_file)
 
         dir_paths[:include] = File.join(dir, 'include')
@@ -318,6 +345,8 @@ END_MINGW
         $defs.push('-DIMAGEMAGICK_GREATER_THAN_EQUAL_6_8_9=1')
       end
 
+      $defs.push('-DIMAGEMAGICK_7=1') if is_im7
+
       create_header
     end
 
@@ -332,6 +361,10 @@ END_MINGW
 
       create_makefile('RMagick2')
       print_summary
+    end
+
+    def is_im7
+      Gem::Version.new($magick_version) >= Gem::Version.new('7.0.0')
     end
 
     def print_summary
