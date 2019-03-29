@@ -441,16 +441,15 @@ VALUE
 Info_authenticate(VALUE self)
 {
     Info *info;
+    const char *authenticate;
 
     Data_Get_Struct(self, Info, info);
-    if (info->authenticate)
-    {
-        return rb_str_new2(info->authenticate);
-    }
-    else
-    {
-        return Qnil;
-    }
+#if defined(IMAGEMAGICK_7)
+    authenticate = GetImageOption(info, "authenticate");
+#else
+    authenticate = info->authenticate;
+#endif
+    return C_str_to_R_str(authenticate);
 }
 
 
@@ -461,34 +460,41 @@ Info_authenticate(VALUE self)
  *   - @verbatim Info#authenticate= @endverbatim
  *
  * @param self this object
- * @param passwd the authenticating password
- * @return passwd
+ * @param passwd_arg the authenticating password
+ * @return passwd_arg
  */
 VALUE
-Info_authenticate_eq(VALUE self, VALUE passwd)
+Info_authenticate_eq(VALUE self, VALUE passwd_arg)
 {
     Info *info;
-    char *passwd_p = NULL;
-    long passwd_l = 0;
+    char *passwd = NULL;
+    long length = 0;
 
     Data_Get_Struct(self, Info, info);
 
-    if (!NIL_P(passwd))
+    if (!NIL_P(passwd_arg))
     {
-        passwd_p = rm_str2cstr(passwd, &passwd_l);
+        passwd = rm_str2cstr(passwd_arg, &length);
     }
 
+#if !defined(IMAGEMAGICK_7)
     if (info->authenticate)
     {
         magick_free(info->authenticate);
         info->authenticate = NULL;
     }
-    if (passwd_l > 0)
+#endif
+
+    if (length > 0)
     {
-        magick_clone_string(&info->authenticate, passwd_p);
+#if defined(IMAGEMAGICK_7)
+        SetImageOption(info, "authenticate", passwd);
+#else
+        magick_clone_string(&info->authenticate, passwd);
+#endif
     }
 
-    return passwd;
+    return passwd_arg;
 }
 
 
@@ -2465,7 +2471,20 @@ Info_units_eq(VALUE self, VALUE units)
  * @param self this object.
  * @return the viewing parameters
  */
-DEF_ATTR_READER(Info, view, str)
+VALUE
+Info_view(VALUE self)
+{
+    Info *info;
+    const char *view;
+
+    Data_Get_Struct(self, Info, info);
+#if defined(IMAGEMAGICK_7)
+    view = GetImageOption(info, "fpx:view");
+#else
+    view = info->view;
+#endif
+    return C_str_to_R_str(view);
+}
 
 /**
  * Set FlashPix viewing parameters.
@@ -2481,19 +2500,31 @@ VALUE
 Info_view_eq(VALUE self, VALUE view_arg)
 {
     Info *info;
-    char *view;
+    char *view = NULL;
+    long length = 0;
 
     Data_Get_Struct(self, Info, info);
 
-    if (NIL_P(view_arg) || StringValuePtr(view_arg) == NULL)
+    if (!NIL_P(view_arg))
+    {
+        view = rm_str2cstr(view_arg, &length);
+    }
+
+#if !defined(IMAGEMAGICK_7)
+    if (info->view)
     {
         magick_free(info->view);
         info->view = NULL;
     }
-    else
+#endif
+
+    if (length > 0)
     {
-        view = StringValuePtr(view_arg);
+#if defined(IMAGEMAGICK_7)
+        SetImageOption(info, "fpx:view", view);
+#else
         magick_clone_string(&info->view, view);
+#endif
     }
     return view_arg;
 }
