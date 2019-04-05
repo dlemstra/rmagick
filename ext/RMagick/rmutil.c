@@ -626,7 +626,17 @@ rm_app2quantum(VALUE obj)
 Image *
 rm_acquire_image(ImageInfo *info)
 {
-    return AcquireImage(info);
+    Image *new_image;
+
+#if defined(IMAGEMAGICK_7)
+    ExceptionInfo *exception = AcquireExceptionInfo();
+    new_image = AcquireImage(info, exception);
+    CHECK_EXCEPTION()
+    (void) DestroyExceptionInfo(exception);
+#else
+    new_image = AcquireImage(info);
+#endif
+    return new_image;
 }
 
 
@@ -660,12 +670,19 @@ rm_cur_image(VALUE img)
 VALUE
 rm_pixelcolor_to_color_name(Image *image, PixelColor *color)
 {
+    PixelColor pp;
     char name[MaxTextExtent];
     ExceptionInfo *exception;
 
     exception = AcquireExceptionInfo();
 
-    (void) QueryColorname(image, color, X11Compliance, name, exception);
+    pp = *color;
+#if defined(IMAGEMAGICK_7)
+    pp.depth = MAGICKCORE_QUANTUM_DEPTH;
+    pp.colorspace = image->colorspace;
+#endif
+
+    (void) QueryColorname(image, &pp, X11Compliance, name, exception);
     CHECK_EXCEPTION()
     (void) DestroyExceptionInfo(exception);
 
@@ -701,7 +718,12 @@ rm_pixelcolor_to_color_name_info(Info *info, PixelColor *color)
         rb_raise(rb_eNoMemError, "not enough memory to continue.");
     }
 
+#if defined(IMAGEMAGICK_7)
+    image->alpha_trait = UndefinedPixelTrait;
+#else
     image->matte = MagickFalse;
+#endif
+
     color_name = rm_pixelcolor_to_color_name(image, color);
     (void) DestroyImage(image);
 
@@ -719,7 +741,11 @@ rm_pixelcolor_to_color_name_info(Info *info, PixelColor *color)
 void
 rm_init_magickpixel(const Image *image, MagickPixel *pp)
 {
+#if defined(IMAGEMAGICK_7)
+    GetPixelInfo(image, pp);
+#else
     GetMagickPixelPacket(image, pp);
+#endif
 }
 
 /**
@@ -736,7 +762,12 @@ rm_set_magickpixel(MagickPixel *pp, const char *color)
     ExceptionInfo *exception;
 
     exception = AcquireExceptionInfo();
+
+#if defined(IMAGEMAGICK_7)
+    (void) QueryColorCompliance(color, AllCompliance, pp, exception);
+#else
     (void) QueryMagickColor(color, pp, exception);
+#endif
     // This exception is ignored because the color comes from places where we control
     // the value and it is very unlikely that an exception will be thrown.
     (void) DestroyExceptionInfo(exception);
@@ -922,7 +953,18 @@ ImageMagickError_initialize(int argc, VALUE *argv, VALUE self)
 const char *
 rm_get_property(const Image *img, const char *property)
 {
-    return GetImageProperty(img, property);
+    const char *result;
+
+#if defined(IMAGEMAGICK_7)
+    ExceptionInfo *exception;
+    exception = AcquireExceptionInfo();
+    result = GetImageProperty(img, property, exception);
+    CHECK_EXCEPTION()
+    (void) DestroyExceptionInfo(exception);
+#else
+    result = GetImageProperty(img, property);
+#endif
+    return result;
 }
 
 
@@ -939,7 +981,18 @@ rm_get_property(const Image *img, const char *property)
 MagickBooleanType
 rm_set_property(Image *image, const char *property, const char *value)
 {
-    return SetImageProperty(image, property, value);
+    MagickBooleanType okay;
+
+#if defined(IMAGEMAGICK_7)
+    ExceptionInfo *exception;
+    exception = AcquireExceptionInfo();
+    okay = SetImageProperty(image, property, value, exception);
+    CHECK_EXCEPTION()
+    (void) DestroyExceptionInfo(exception);
+#else
+    okay = SetImageProperty(image, property, value);
+#endif
+    return okay;
 }
 
 
@@ -1046,6 +1099,9 @@ void rm_sync_image_options(Image *image, Info *info)
     MagickStatusType flags;
     GeometryInfo geometry_info;
     const char *option;
+#if defined(IMAGEMAGICK_7)
+    ExceptionInfo *exception;
+#endif
 
     // The option strings will be set only when their attribute values were
     // set in the optional argument block.
@@ -1063,7 +1119,15 @@ void rm_sync_image_options(Image *image, Info *info)
 
     if (info->colorspace != UndefinedColorspace)
     {
+#if defined(IMAGEMAGICK_7)
+        exception = AcquireExceptionInfo();
+        SetImageColorspace(image, info->colorspace, exception);
+        // We should not throw an exception in this method and that is
+        // why the exception is being ignored.
+        (void) DestroyExceptionInfo(exception);
+#else
         SetImageColorspace(image, info->colorspace);
+#endif
     }
 
     if (info->compression != UndefinedCompression)
@@ -1080,11 +1144,20 @@ void rm_sync_image_options(Image *image, Info *info)
     if (info->density)
     {
         flags = ParseGeometry(info->density, &geometry_info);
+#if defined(IMAGEMAGICK_7)
+        image->resolution.x = geometry_info.rho;
+        image->resolution.y = geometry_info.sigma;
+#else
         image->x_resolution = geometry_info.rho;
         image->y_resolution = geometry_info.sigma;
+#endif
         if ((flags & SigmaValue) == 0)
         {
+#if defined(IMAGEMAGICK_7)
+            image->resolution.y = image->resolution.x;
+#else
             image->y_resolution = image->x_resolution;
+#endif
         }
     }
 
@@ -1174,8 +1247,13 @@ void rm_sync_image_options(Image *image, Info *info)
               {
                 if (info->units == PixelsPerCentimeterResolution)
                 {
+#if defined(IMAGEMAGICK_7)
+                    image->resolution.x /= 2.54;
+                    image->resolution.y /= 2.54;
+#else
                     image->x_resolution /= 2.54;
                     image->y_resolution /= 2.54;
+#endif
                 }
                 break;
               }
@@ -1183,8 +1261,13 @@ void rm_sync_image_options(Image *image, Info *info)
               {
                 if (info->units == PixelsPerInchResolution)
                 {
+#if defined(IMAGEMAGICK_7)
+                    image->resolution.x *= 2.54;
+                    image->resolution.y *= 2.54;
+#else
                     image->x_resolution *= 2.54;
                     image->y_resolution *= 2.54;
+#endif
                 }
                 break;
               }
@@ -1219,8 +1302,18 @@ rm_exif_by_entry(Image *image)
     char *str;
     size_t len = 0, property_l, value_l;
     VALUE v;
+#if defined(IMAGEMAGICK_7)
+    ExceptionInfo *exception;
+#endif
 
+#if defined(IMAGEMAGICK_7)
+    exception = AcquireExceptionInfo();
+    (void) GetImageProperty(image, "exif:*", exception);
+    CHECK_EXCEPTION()
+#else
     (void) GetImageProperty(image, "exif:*");
+#endif
+
     ResetImagePropertyIterator(image);
     property = GetNextImageProperty(image);
 
@@ -1236,7 +1329,12 @@ rm_exif_by_entry(Image *image)
                 len += 1;   // there will be a \n between property=value entries
             }
             len += property_l - 5;
-            value = GetImageProperty(image,property);
+#if defined(IMAGEMAGICK_7)
+            value = GetImageProperty(image, property, exception);
+            CHECK_EXCEPTION()
+#else
+            value = GetImageProperty(image, property);
+#endif
             if (value)
             {
                 // add 1 for the = between property and value
@@ -1248,8 +1346,12 @@ rm_exif_by_entry(Image *image)
 
     if (len == 0)
     {
+#if defined(IMAGEMAGICK_7)
+        (void) DestroyExceptionInfo(exception);
+#endif
         return Qnil;
     }
+
     str = xmalloc(len);
     len = 0;
 
@@ -1268,7 +1370,16 @@ rm_exif_by_entry(Image *image)
             }
             memcpy(str+len, property+5, property_l-5);
             len += property_l - 5;
-            value = GetImageProperty(image,property);
+#if defined(IMAGEMAGICK_7)
+            value = GetImageProperty(image, property, exception);
+            if (rm_should_raise_exception(exception, RetainExceptionRetention))
+            {
+                xfree(str);
+                rm_raise_exception(exception);
+            }
+#else
+            value = GetImageProperty(image, property);
+#endif
             if (value)
             {
                 value_l = strlen(value);
@@ -1279,6 +1390,10 @@ rm_exif_by_entry(Image *image)
         }
         property = GetNextImageProperty(image);
     }
+
+#if defined(IMAGEMAGICK_7)
+    (void) DestroyExceptionInfo(exception);
+#endif
 
     v = rb_str_new(str, len);
     xfree(str);
@@ -1308,8 +1423,17 @@ rm_exif_by_number(Image *image)
     char *str;
     size_t len = 0, property_l, value_l;
     VALUE v;
+#if defined(IMAGEMAGICK_7)
+    ExceptionInfo *exception;
+#endif
 
+#if defined(IMAGEMAGICK_7)
+    exception = AcquireExceptionInfo();
+    (void) GetImageProperty(image, "exif:!", exception);
+    CHECK_EXCEPTION()
+#else
     (void) GetImageProperty(image, "exif:!");
+#endif
     ResetImagePropertyIterator(image);
     property = GetNextImageProperty(image);
 
@@ -1325,7 +1449,12 @@ rm_exif_by_number(Image *image)
                 len += 1;   // there will be a \n between property=value entries
             }
             len += property_l;
-            value = GetImageProperty(image,property);
+#if defined(IMAGEMAGICK_7)
+            value = GetImageProperty(image, property, exception);
+            CHECK_EXCEPTION()
+#else
+            value = GetImageProperty(image, property);
+#endif
             if (value)
             {
                 // add 1 for the = between property and value
@@ -1337,8 +1466,12 @@ rm_exif_by_number(Image *image)
 
     if (len == 0)
     {
+#if defined(IMAGEMAGICK_7)
+        (void) DestroyExceptionInfo(exception);
+#endif
         return Qnil;
     }
+
     str = xmalloc(len);
     len = 0;
 
@@ -1357,7 +1490,16 @@ rm_exif_by_number(Image *image)
             }
             memcpy(str+len, property, property_l);
             len += property_l;
-            value = GetImageProperty(image,property);
+#if defined(IMAGEMAGICK_7)
+            value = GetImageProperty(image, property, exception);
+            if (rm_should_raise_exception(exception, RetainExceptionRetention))
+            {
+                xfree(str);
+                rm_raise_exception(exception);
+            }
+#else
+            value = GetImageProperty(image, property);
+#endif
             if (value)
             {
                 value_l = strlen(value);
@@ -1368,6 +1510,10 @@ rm_exif_by_number(Image *image)
         }
         property = GetNextImageProperty(image);
     }
+
+#if defined(IMAGEMAGICK_7)
+    (void) DestroyExceptionInfo(exception);
+#endif
 
     v = rb_str_new(str, len);
     xfree(str);
@@ -1551,6 +1697,7 @@ rm_split(Image *image)
 }
 
 
+#if !defined(IMAGEMAGICK_7)
 /**
  * If an ExceptionInfo struct in a list of images indicates a warning, issue a
  * warning message. If an ExceptionInfo struct indicates an error, raise an
@@ -1600,6 +1747,7 @@ rm_check_image_exception(Image *imglist, ErrorRetention retention)
 
     (void) DestroyExceptionInfo(exception);
 }
+#endif
 
 
 #define ERROR_MSG_SIZE 1024
