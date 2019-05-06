@@ -41,14 +41,6 @@ class PixelUT < Test::Unit::TestCase
     assert_raise(TypeError) { @pixel.alpha = 'x' }
   end
 
-  def test_opacity
-    assert_nothing_raised { @pixel.opacity = 123 }
-    assert_equal(123, @pixel.opacity)
-    assert_nothing_raised { @pixel.opacity = 255.25 }
-    assert_equal(255, @pixel.opacity)
-    assert_raise(TypeError) { @pixel.opacity = 'x' }
-  end
-
   def test_cyan
     assert_nothing_raised { @pixel.cyan = 123 }
     assert_equal(123, @pixel.cyan)
@@ -210,11 +202,6 @@ class PixelUT < Test::Unit::TestCase
     assert_in_delta(hsla[3], hsla2[3], 0.005, "#{hsla.inspect} != #{hsla2.inspect} with args: #{args.inspect} and #{args2.inspect}")
   end
 
-  def test_from_hsl
-    assert_instance_of(Magick::Pixel, Magick::Pixel.from_HSL([127, 50, 50]))
-    assert_raise(ArgumentError) { Magick::Pixel.from_HSL([127, 50]) }
-  end
-
   def test_intensity
     assert_kind_of(Integer, @pixel.intensity)
   end
@@ -250,18 +237,12 @@ class PixelUT < Test::Unit::TestCase
     pixel.blue += 20
     assert_equal(-1, @pixel <=> pixel)
 
-    @pixel.opacity = 100
+    @pixel.alpha = 100
     pixel = @pixel.dup
-    pixel.opacity -= 10
-    assert_equal(1, @pixel <=> pixel)
-    pixel.opacity += 20
+    pixel.alpha -= 10
     assert_equal(-1, @pixel <=> pixel)
-  end
-
-  def test_to_hsl
-    hsl = @pixel.to_HSL
-    assert_instance_of(Array, hsl)
-    assert_equal(3, hsl.size)
+    pixel.alpha += 20
+    assert_equal(1, @pixel <=> pixel)
   end
 
   def test_to_color

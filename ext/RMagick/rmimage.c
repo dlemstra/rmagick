@@ -618,30 +618,6 @@ Image_alpha_q(VALUE self)
 
 
 /**
- * Equivalent to -alpha option.
- *
- * Ruby usage:
- *   - @verbatim Image#alpha=(alpha) @endverbatim
- *
- * @param self this object
- * @param type the alpha type
- * @return alpha
- * @deprecated This method has been deprecated. Please use Image_alpha.
- * @see Image_alpha
- * @see mogrify.c (in ImageMagick)
- */
-VALUE
-Image_alpha_eq(VALUE self, VALUE type)
-{
-    VALUE argv[1];
-    argv[0] = type;
-    rb_warning("Image#alpha= is deprecated; use Image#alpha.");
-    Image_alpha(1, argv, self);
-    return type;
-}
-
-
-/**
  * Transform an image as dictated by the affine matrix argument.
  *
  * Ruby usage:
@@ -1306,7 +1282,6 @@ get_relative_offsets(VALUE grav, Image *image, Image *mark, long *x_offset, long
         case NorthGravity:
         case SouthGravity:
         case CenterGravity:
-        case StaticGravity:
             *x_offset += (long)(image->columns/2) - (long)(mark->columns/2);
             break;
         default:
@@ -1322,7 +1297,6 @@ get_relative_offsets(VALUE grav, Image *image, Image *mark, long *x_offset, long
         case EastGravity:
         case WestGravity:
         case CenterGravity:
-        case StaticGravity:
             *y_offset += (long)(image->rows/2) - (long)(mark->rows/2);
             break;
         case NorthEastGravity:
@@ -1372,7 +1346,6 @@ get_offsets_from_gravity(GravityType gravity, Image *image, Image *mark
             *x_offset = 0;
             *y_offset = ((long)(image->rows) - (long)(mark->rows)) / 2;
             break;
-        case StaticGravity:
         case CenterGravity:
         default:
             *x_offset = ((long)(image->columns) - (long)(mark->columns)) / 2;
@@ -1696,53 +1669,6 @@ Image_blue_shift(int argc, VALUE *argv, VALUE self)
     DestroyExceptionInfo(exception);
 
     return rm_image_new(new_image);
-}
-
-
-/**
- * Get the blur attribute.
- *
- * Ruby usage:
- *   - @verbatim Image#blur @endverbatim
- *
- * @param self this object
- * @return the blur
- * @deprecated This method has been deprecated.
- */
-VALUE
-Image_blur(VALUE self)
-{
-    Image *image;
-
-    rb_warning("Image#blur is deprecated");
-    (void) rm_check_destroyed(self);
-    Data_Get_Struct(self, Image, image);
-    return C_dbl_to_R_dbl(image->blur);
-}
-
-
-/**
- * Set the blur attribute.
- *
- * Ruby usage:
- *   - @verbatim Image#blur= @endverbatim
- *
- * @param self this object
- * @param value the blur
- * @return value
- * @deprecated This method has been deprecated.
- */
-VALUE
-Image_blur_eq(VALUE self, VALUE value)
-{
-    Image *image;
-
-    rb_warning("Image#blur= is deprecated");
-    (void) rm_check_destroyed(self);
-    rb_check_frozen(self);
-    Data_Get_Struct(self, Image, image);
-    image->blur = R_dbl_to_C_dbl(value);
-    return value;
 }
 
 
@@ -3073,85 +2999,6 @@ DEF_ATTR_READER(Image, columns, int)
 
 
 /**
- * Combine the Red channel of the first image with the Green channel of the
- * 2nd image and the Blue channel of the 3rd image. Any of the image arguments
- * may be omitted or replaced by nil.
- *
- * Ruby usage:
- *   - @verbatim new_image = Image.combine(red) @endverbatim
- *   - @verbatim new_image = Image.combine(red, green) @endverbatim
- *   - @verbatim new_image = Image.combine(red, green, blue) @endverbatim
- *   - @verbatim new_image = Image.combine(red, green, blue, opacity) @endverbatim
- *
- * Notes:
- *   - Calls CombineImages.
- *
- * @param argc number of input arguments
- * @param argv array of input arguments
- * @param self this object
- * @return a new image
- */
-VALUE Image_combine(int argc, VALUE *argv, VALUE self ATTRIBUTE_UNUSED)
-{
-    ChannelType channel = 0;
-    Image *image, *images = NULL, *new_image;
-    ExceptionInfo *exception;
-
-    switch (argc)
-    {
-        case 4:
-            if (argv[3] != Qnil)
-            {
-                channel |= OpacityChannel;
-                image = rm_check_destroyed(argv[3]);
-                AppendImageToList(&images, image);
-            }
-        case 3:
-            if (argv[2] != Qnil)
-            {
-                channel |= BlueChannel;
-                image = rm_check_destroyed(argv[2]);
-                AppendImageToList(&images, image);
-            }
-        case 2:
-            if (argv[1] != Qnil)
-            {
-                channel |= GreenChannel;
-                image = rm_check_destroyed(argv[1]);
-                AppendImageToList(&images, image);
-            }
-        case 1:
-            if (argv[0] != Qnil)
-            {
-                channel |= RedChannel;
-                image = rm_check_destroyed(argv[0]);
-                AppendImageToList(&images, image);
-            }
-            break;
-        default:
-            rb_raise(rb_eArgError, "wrong number of arguments (1 to 4 expected, got %d)", argc);
-    }
-
-    if (channel == 0)
-    {
-        rb_raise(rb_eArgError, "no images to combine");
-    }
-
-    exception = AcquireExceptionInfo();
-    ReverseImageList(&images);
-    new_image = CombineImages(images, channel, exception);
-    rm_check_exception(exception, images, RetainOnError);
-    (void) DestroyExceptionInfo(exception);
-    rm_split(images);
-
-    rm_ensure_result(new_image);
-
-    return rm_image_new(new_image);
-
-}
-
-
-/**
  * Compare one or more channels in two images and returns the specified
  * distortion metric and a comparison image.
  *
@@ -3340,7 +3187,6 @@ composite(int bang, int argc, VALUE *argv, VALUE self, ChannelType channels)
                     x_offset = 0;
                     y_offset = ((long)(image->rows) - (long)(comp_image->rows)) / 2;
                     break;
-                case StaticGravity:
                 case CenterGravity:
                 default:
                     x_offset = ((long)(image->columns) - (long)(comp_image->columns)) / 2;
@@ -3388,7 +3234,6 @@ composite(int bang, int argc, VALUE *argv, VALUE self, ChannelType channels)
                 case NorthGravity:
                 case SouthGravity:
                 case CenterGravity:
-                case StaticGravity:
                     x_offset += (long)(image->columns/2) - (long)(comp_image->columns/2);
                     break;
                 default:
@@ -3404,7 +3249,6 @@ composite(int bang, int argc, VALUE *argv, VALUE self, ChannelType channels)
                 case EastGravity:
                 case WestGravity:
                 case CenterGravity:
-                case StaticGravity:
                     y_offset += (long)(image->rows/2) - (long)(comp_image->rows/2);
                     break;
                 case NorthEastGravity:
@@ -8298,63 +8142,6 @@ Image_magnify_bang(VALUE self)
 
 
 /**
- * Call MapImage.
- *
- * Ruby usage:
- *   - @verbatim Image#map(map_image) @endverbatim
- *   - @verbatim Image#map(map_image, dither) @endverbatim
- *
- * Notes:
- *   - Default dither is false
- *
- * @param argc number of input arguments
- * @param argv array of input arguments
- * @param self this object
- * @return a new image
- */
-VALUE
-Image_map(int argc, VALUE *argv, VALUE self)
-{
-    Image *image, *new_image;
-    Image *map;
-    VALUE map_obj, map_arg;
-    unsigned int dither = MagickFalse;
-
-    QuantizeInfo quantize_info;
-    rb_warning("Image#map is deprecated. Use Image#remap instead");
-
-    image = rm_check_destroyed(self);
-
-    switch (argc)
-    {
-        case 2:
-            dither = RTEST(argv[1]);
-        case 1:
-            map_arg = argv[0];
-            break;
-        default:
-            rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 2)", argc);
-            break;
-    }
-
-    map_obj = rm_cur_image(map_arg);
-    map = rm_check_destroyed(map_obj);
-
-    new_image = rm_clone_image(image);
-
-    GetQuantizeInfo(&quantize_info);
-    quantize_info.dither=dither;
-    (void) RemapImage(&quantize_info, new_image, map);
-    rm_check_image_exception(new_image, DestroyOnError);
-
-    RB_GC_GUARD(map_obj);
-    RB_GC_GUARD(map_arg);
-
-    return rm_image_new(new_image);
-}
-
-
-/**
  * Support Marshal.dump >= 1.8.
  *
  * Ruby usage:
@@ -8474,29 +8261,6 @@ get_image_mask(Image *image)
 
 
 /**
- * Set the image mask.
- *
- * Ruby usage:
- *   - @verbatim Image#mask= @endverbatim
- *
- * @param self this object
- * @param mask the mask to use
- * @return copy of the current clip-mask or nil
- * @deprecated This method has been deprecated. Please use Image_mask(mask-image).
- * @see Image_mask(mask-image)
- * @see get_image_mask
- */
-VALUE
-Image_mask_eq(VALUE self, VALUE mask)
-{
-    VALUE v[1];
-    v[0] = mask;
-    rb_warning("Image#mask= is deprecated; use Image#mask.");
-    return Image_mask(1, v, self);
-}
-
-
-/**
  * Associate a clip mask with the image.
  *
  * Ruby usage:
@@ -8607,62 +8371,6 @@ Image_mask(int argc, VALUE *argv, VALUE self)
 
     // Always return a copy of the mask!
     return get_image_mask(image);
-}
-
-
-/**
- * Get matte attribute.
- *
- * Ruby usage:
- *   - @verbatim Image#matte @endverbatim
- *
- * @param self this object
- * @return the matte
- * @deprecated This method has been deprecated. Please use Image_alpha.
- * @see Image_alpha
- * @see Image_alpha_eq
- */
-VALUE
-Image_matte(VALUE self)
-{
-    Image *image;
-
-    image = rm_check_destroyed(self);
-    rb_warning("Image#matte is deprecated; use Image#alpha.");
-    return image->matte ? Qtrue : Qfalse;
-}
-
-
-/**
- * Set matte attribute.
- *
- * Ruby usage:
- *   - @verbatim Image#matte= @endverbatim
- *
- * @param self this object
- * @param matte the matte
- * @return the matte
- * @deprecated This method has been deprecated. Please use Image_alpha.
- * @see Image_alpha_eq
- * @see Image_alpha
- */
-VALUE
-Image_matte_eq(VALUE self, VALUE matte)
-{
-    VALUE alpha_channel_type;
-
-    if (RTEST(matte))
-    {
-        alpha_channel_type = rb_const_get(Module_Magick, rb_intern("ActivateAlphaChannel"));
-    }
-    else
-    {
-        alpha_channel_type = rb_const_get(Module_Magick, rb_intern("DeactivateAlphaChannel"));
-    }
-
-    rb_warning("Image#matte= is deprecated; use Image#alpha.");
-
-    return Image_alpha_eq(self, alpha_channel_type);
 }
 
 
@@ -13109,28 +12817,6 @@ Image_swirl(VALUE self, VALUE degrees_obj)
 
 
 /**
- * Synchronize image properties with the image profiles.
- *
- * Ruby usage:
- *   - @verbatim Image#sync_profiles @endverbatim
- *
- * @param self this object
- * @return true if succeeded, otherwise false
- */
-VALUE
-Image_sync_profiles(VALUE self)
-{
-    Image *image = rm_check_destroyed(self);
-    VALUE okay =  SyncImageProfiles(image) ? Qtrue : Qfalse;
-    rm_check_image_exception(image, RetainOnError);
-
-    RB_GC_GUARD(okay);
-
-    return okay;
-}
-
-
-/**
  * Emulates Magick++'s floodFillTexture.
  *
  * If the FloodfillMethod method is specified, flood-fills texture across pixels
@@ -15073,7 +14759,6 @@ cropper(int bang, int argc, VALUE *argv, VALUE self)
                 case NorthGravity:
                 case SouthGravity:
                 case CenterGravity:
-                case StaticGravity:
                     nx += image->columns/2 - columns/2;
                     break;
                 default:
@@ -15089,7 +14774,6 @@ cropper(int bang, int argc, VALUE *argv, VALUE self)
                 case EastGravity:
                 case WestGravity:
                 case CenterGravity:
-                case StaticGravity:
                     ny += image->rows/2 - rows/2;
                     break;
                 case NorthEastGravity:
@@ -15155,7 +14839,6 @@ cropper(int bang, int argc, VALUE *argv, VALUE self)
                     nx = image->columns - columns;
                     ny = image->rows - rows;
                     break;
-                case StaticGravity:
                 case CenterGravity:
                     nx = (image->columns - columns) / 2;
                     ny = (image->rows - rows) / 2;

@@ -127,26 +127,6 @@ Pixel_alpha(VALUE self)
     return C_int_to_R_int(QuantumRange - pixel->opacity);
 }
 
-
-/**
- * Get Pixel opacity attribute.
- *
- * Ruby usage:
- *   - @verbatim Pixel#opacity @endverbatim
- *
- * @param self this object
- * @return the opacity value
- * @deprecated This method has been deprecated. Please use Pixel_alpha.
- */
-VALUE
-Pixel_opacity(VALUE self)
-{
-    Pixel *pixel;
-    rb_warning("Pixel#opacity is deprecated; use Pixel#opacity.");
-    Data_Get_Struct(self, Pixel, pixel);
-    return C_int_to_R_int(pixel->opacity);
-}
-
 /**
  * Set Pixel red attribute.
  *
@@ -224,37 +204,6 @@ Pixel_alpha_eq(VALUE self, VALUE v)
     (void) rb_funcall(self, rm_ID_changed, 0);
     (void) rb_funcall(self, rm_ID_notify_observers, 1, self);
     return QUANTUM2NUM(QuantumRange - pixel->opacity);
-}
-
-
-/**
- * Set Pixel opacity attribute.
- *
- * Ruby usage:
- *   - @verbatim Pixel#opacity= @endverbatim
- *
- * Notes:
- *   - Pixel is Observable. Setters call changed, notify_observers
- *   - Setters return their argument values for backward compatibility to when
- *     Pixel was a Struct class.
- *
- * @param self this object
- * @param v the opacity value
- * @return self
- * @deprecated This method has been deprecated. Please use Pixel_alpha_eq.
- */
-VALUE
-Pixel_opacity_eq(VALUE self, VALUE v)
-{
-    Pixel *pixel;
-
-    rb_warning("Pixel#opacity= is deprecated; use Pixel#alpha=.");
-    rb_check_frozen(self);
-    Data_Get_Struct(self, Pixel, pixel);
-    pixel->opacity = APP2QUANTUM(v);
-    (void) rb_funcall(self, rm_ID_changed, 0);
-    (void) rb_funcall(self, rm_ID_notify_observers, 1, self);
-    return QUANTUM2NUM(pixel->opacity);
 }
 
 /*
@@ -593,7 +542,6 @@ Pixel_from_color(VALUE class ATTRIBUTE_UNUSED, VALUE name)
  *   - 0 <= saturation <= 255 OR "0%" <= saturation <= "100%"
  *   - 0 <= lightness <= 255 OR "0%" <= lightness <= "100%"
  *   - 0 <= alpha <= 1 (0 is transparent, 1 is opaque) OR "0%" <= alpha <= "100%"
- *   - Replaces brain-dead Pixel_from_HSL.
  *
  * @param argc number of input arguments
  * @param argv array of input arguments
@@ -661,42 +609,6 @@ Pixel_from_hsla(int argc, VALUE *argv, VALUE class ATTRIBUTE_UNUSED)
     (void) DestroyExceptionInfo(exception);
 
     return Pixel_from_MagickPixel(&pp);
-}
-
-
-/**
- * Construct an RGB pixel from the array [hue, saturation, luminosity].
- *
- * Ruby usage:
- *   - @verbatim Pixel.from_HSL  @endverbatim
- *
- * @param class the Ruby class to use
- * @param hsl the array
- * @return a new Magick::Pixel object
- * @deprecated This method has been deprecated. Please use Pixel_from_hsla.
- */
-VALUE
-Pixel_from_HSL(VALUE class ATTRIBUTE_UNUSED, VALUE hsl)
-{
-    PixelColor rgb;
-    double hue, saturation, luminosity;
-
-    memset(&rgb, 0, sizeof(rgb));
-
-    hsl = rb_Array(hsl);    // Ensure array
-    if (RARRAY_LEN(hsl) < 3)
-    {
-        rb_raise(rb_eArgError, "array argument must have at least 3 elements");
-    }
-
-    hue        = NUM2DBL(rb_ary_entry(hsl, 0));
-    saturation = NUM2DBL(rb_ary_entry(hsl, 1));
-    luminosity = NUM2DBL(rb_ary_entry(hsl, 2));
-
-    rb_warning("Pixel#from_HSL is deprecated; use from_hsla");
-    ConvertHSLToRGB(hue, saturation, luminosity,
-                 &rgb.red, &rgb.green, &rgb.blue);
-    return Pixel_from_PixelColor(&rgb);
 }
 
 
@@ -1018,9 +930,6 @@ Pixel_spaceship(VALUE self, VALUE other)
  * Ruby usage:
  *   - @verbatim Pixel#to_hsla @endverbatim
  *
- * Notes:
- *   - Replace brain-dead Pixel_to_HSL.
- *
  * @param self this object
  * @return an array with hsla data
  * @see Pixel_from_hsla
@@ -1057,36 +966,6 @@ Pixel_to_hsla(VALUE self)
     RB_GC_GUARD(hsla);
 
     return hsla;
-}
-
-/**
- * Convert an RGB pixel to the array [hue, saturation, luminosity].
- *
- * Ruby usage:
- *   - @verbatim Pixel#to_HSL @endverbatim
- *
- * @param self this object
- * @return an array with hsl data
- * @deprecated This method has been deprecated. Please use Pixel_to_hsla.
- */
-VALUE
-Pixel_to_HSL(VALUE self)
-{
-    Pixel *pixel;
-    double hue, saturation, luminosity;
-    VALUE hsl;
-
-    Data_Get_Struct(self, Pixel, pixel);
-
-    rb_warning("Pixel#to_HSL is deprecated; use to_hsla");
-    ConvertRGBToHSL(pixel->red, pixel->green, pixel->blue, &hue, &saturation, &luminosity);
-
-    hsl = rb_ary_new3(3, rb_float_new(hue), rb_float_new(saturation),
-                      rb_float_new(luminosity));
-
-    RB_GC_GUARD(hsl);
-
-    return hsl;
 }
 
 

@@ -587,8 +587,6 @@ extern VALUE ImageList_composite_layers(int, VALUE *, VALUE);
 extern VALUE ImageList_deconstruct(VALUE);
 extern VALUE ImageList_display(VALUE);
 extern VALUE ImageList_flatten_images(VALUE);
-extern VALUE ImageList_fx(int, VALUE *, VALUE);
-extern VALUE ImageList_map(int, VALUE *, VALUE);
 extern VALUE ImageList_montage(VALUE);
 extern VALUE ImageList_morph(VALUE, VALUE);
 extern VALUE ImageList_mosaic(VALUE);
@@ -625,7 +623,6 @@ ATTR_ACCESSOR(Info, font)
 ATTR_ACCESSOR(Info, format)
 ATTR_ACCESSOR(Info, fuzz)
 ATTR_ACCESSOR(Info, gravity)
-ATTR_ACCESSOR(Info, group)
 ATTR_ACCESSOR(Info, image_type)
 ATTR_ACCESSOR(Info, interlace)
 ATTR_ACCESSOR(Info, label)
@@ -671,9 +668,7 @@ extern GravityType rm_gravity_to_enum(const char *);
 extern VALUE KernelInfo_alloc(VALUE);
 
 extern VALUE KernelInfo_initialize(VALUE, VALUE);
-extern VALUE KernelInfo_zero_nans(VALUE);
 extern VALUE KernelInfo_unity_add(VALUE, VALUE);
-extern VALUE KernelInfo_show(VALUE);
 extern VALUE KernelInfo_scale(VALUE, VALUE, VALUE);
 extern VALUE KernelInfo_scale_geometry(VALUE, VALUE);
 extern VALUE KernelInfo_clone(VALUE);
@@ -682,14 +677,12 @@ extern VALUE KernelInfo_builtin(VALUE, VALUE, VALUE);
 
 
 // rmimage.c
-ATTR_WRITER(Image, alpha)
 ATTR_ACCESSOR(Image, background_color)
 ATTR_READER(Image, base_columns)
 ATTR_READER(Image, base_filename)
 ATTR_READER(Image, base_rows)
 ATTR_ACCESSOR(Image, bias)
 ATTR_ACCESSOR(Image, black_point_compensation)
-ATTR_ACCESSOR(Image, blur)
 ATTR_ACCESSOR(Image, border_color)
 ATTR_READER(Image, bounding_box)
 ATTR_ACCESSOR(Image, chromaticity)
@@ -719,7 +712,6 @@ ATTR_ACCESSOR(Image, image_type)
 ATTR_ACCESSOR(Image, interlace)
 ATTR_ACCESSOR(Image, iptc_profile)
 ATTR_ACCESSOR(Image, iterations)
-ATTR_WRITER(Image, mask)
 ATTR_ACCESSOR(Image, matte)
 ATTR_ACCESSOR(Image, matte_color)
 ATTR_READER(Image, mean_error_per_pixel)
@@ -801,7 +793,6 @@ extern VALUE Image_color_flood_fill(VALUE, VALUE, VALUE, VALUE, VALUE, VALUE);
 extern VALUE Image_color_histogram(VALUE);
 extern VALUE Image_colorize(int, VALUE *, VALUE);
 extern VALUE Image_colormap(int, VALUE *, VALUE);
-extern VALUE Image_combine(int, VALUE *, VALUE);
 extern VALUE Image_composite(int, VALUE *, VALUE);
 extern VALUE Image_composite_affine(VALUE, VALUE, VALUE);
 extern VALUE Image_composite_bang(int, VALUE *, VALUE);
@@ -881,7 +872,6 @@ extern VALUE Image_liquid_rescale(int, VALUE *, VALUE);
 extern VALUE Image__load(VALUE, VALUE);
 extern VALUE Image_magnify(VALUE);
 extern VALUE Image_magnify_bang(VALUE);
-extern VALUE Image_map(int, VALUE *, VALUE);
 extern VALUE Image_marshal_dump(VALUE);
 extern VALUE Image_marshal_load(VALUE, VALUE);
 extern VALUE Image_mask(int, VALUE *, VALUE);
@@ -1019,7 +1009,6 @@ extern VALUE  Pixel_dup(VALUE);
 extern VALUE  Pixel_eql_q(VALUE, VALUE);
 extern VALUE  Pixel_fcmp(int, VALUE *, VALUE);
 extern VALUE  Pixel_from_color(VALUE, VALUE);
-extern VALUE  Pixel_from_HSL(VALUE, VALUE);
 extern VALUE  Pixel_from_hsla(int, VALUE *, VALUE);
 extern VALUE  Pixel_hash(VALUE);
 extern VALUE  Pixel_initialize(int, VALUE *, VALUE);
@@ -1029,7 +1018,6 @@ extern VALUE  Pixel_marshal_dump(VALUE);
 extern VALUE  Pixel_marshal_load(VALUE, VALUE);
 extern VALUE  Pixel_spaceship(VALUE, VALUE);
 extern VALUE  Pixel_to_color(int, VALUE *, VALUE);
-extern VALUE  Pixel_to_HSL(VALUE);
 extern VALUE  Pixel_to_hsla(VALUE);
 extern VALUE  Pixel_to_s(VALUE);
 

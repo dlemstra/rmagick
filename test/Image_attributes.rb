@@ -23,13 +23,6 @@ class Image_Attributes_UT < Test::Unit::TestCase
     @p = Magick::Image.read(IMAGE_WITH_PROFILE).first.color_profile
   end
 
-  # Test old alpha attribute. New alpha() behavior is tested in Image1.rb
-  def test_alpha
-    assert(@img.alpha)
-    assert_nothing_raised { @img.alpha = Magick::DeactivateAlphaChannel }
-    assert(!@img.alpha)
-  end
-
   def test_background_color
     assert_nothing_raised { @img.background_color }
     assert_equal('white', @img.background_color)
@@ -90,13 +83,6 @@ class Image_Attributes_UT < Test::Unit::TestCase
     assert(@img.black_point_compensation)
     assert_nothing_raised { @img.black_point_compensation = false }
     assert_equal(false, @img.black_point_compensation)
-  end
-
-  def test_blur
-    assert_nothing_raised { @img.blur }
-    assert_equal(1.0, @img.blur)
-    assert_nothing_raised { @img.blur = 2.0 }
-    assert_raise(TypeError) { @img.blur = 'x' }
   end
 
   def test_border_color
@@ -406,13 +392,6 @@ class Image_Attributes_UT < Test::Unit::TestCase
     assert_raise(TypeError) { @img.iptc_profile = 2 }
   end
 
-  def test_matte
-    assert_nothing_raised { @img.matte }
-    assert(@img.matte)
-    assert_nothing_raised { @img.matte = false }
-    assert(!@img.matte)
-  end
-
   def test_mean_error
     assert_nothing_raised { @hat.mean_error_per_pixel }
     assert_nothing_raised { @hat.normalized_mean_error }
@@ -621,7 +600,6 @@ class Image_Attributes_UT < Test::Unit::TestCase
   def test_frozen
     @img.freeze
     assert_raise(FreezeError) { @img.background_color = 'xxx' }
-    assert_raise(FreezeError) { @img.blur = 50 }
     assert_raise(FreezeError) { @img.border_color = 'xxx' }
     rp = Magick::Point.new(1, 1)
     gp = Magick::Point.new(1, 1)
@@ -645,8 +623,6 @@ class Image_Attributes_UT < Test::Unit::TestCase
     assert_raise(FreezeError) { @img.geometry = '100x100' }
     assert_raise(FreezeError) { @img.interlace = Magick::NoInterlace }
     assert_raise(FreezeError) { @img.iptc_profile = 'xxx' }
-    assert_raise(FreezeError) { @img.mask = @img }
-    assert_raise(FreezeError) { @img.matte = true }
     assert_raise(FreezeError) { @img.monitor = proc { |name, _q, _s| puts name } }
     assert_raise(FreezeError) { @img.offset = 100 }
     assert_raise(FreezeError) { @img.opacity = 100 }
