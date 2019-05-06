@@ -15,7 +15,6 @@
 
 #define ENUMERATORS_CLASS_VAR "@@enumerators"
 #define ENUM_TO_NAME(_enum) case _enum: return #_enum;
-#define ENUM_SET_NAME(_enum) case _enum: name = #_enum; break;
 
 
 static VALUE Enum_type_values(VALUE);
@@ -685,7 +684,11 @@ StorageType_name(StorageType type)
         ENUM_TO_NAME(CharPixel)
         ENUM_TO_NAME(DoublePixel)
         ENUM_TO_NAME(FloatPixel)
+#if defined(IMAGEMAGICK_7)
+        ENUM_TO_NAME(LongLongPixel)
+#else
         ENUM_TO_NAME(IntegerPixel)
+#endif
         ENUM_TO_NAME(LongPixel)
         ENUM_TO_NAME(QuantumPixel)
         ENUM_TO_NAME(ShortPixel)
