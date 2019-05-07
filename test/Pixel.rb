@@ -41,14 +41,6 @@ class PixelUT < Test::Unit::TestCase
     assert_raise(TypeError) { @pixel.alpha = 'x' }
   end
 
-  def test_opacity
-    assert_nothing_raised { @pixel.opacity = 123 }
-    assert_equal(123, @pixel.opacity)
-    assert_nothing_raised { @pixel.opacity = 255.25 }
-    assert_equal(255, @pixel.opacity)
-    assert_raise(TypeError) { @pixel.opacity = 'x' }
-  end
-
   def test_cyan
     assert_nothing_raised { @pixel.cyan = 123 }
     assert_equal(123, @pixel.cyan)
@@ -118,13 +110,13 @@ class PixelUT < Test::Unit::TestCase
     hash = nil
     assert_nothing_raised { hash = @pixel.hash }
     assert_not_nil(hash)
-    assert_equal(1_385_501_952, hash)
+    assert_equal(1_385_502_079, hash)
 
     p = Magick::Pixel.new
-    assert_equal(0, p.hash)
+    assert_equal(127, p.hash)
 
     p = Magick::Pixel.from_color('red')
-    assert_equal(2_139_095_040, p.hash)
+    assert_equal(2_139_095_167, p.hash)
 
     # Pixel.hash sacrifices the last bit of the opacity channel
     p = Magick::Pixel.new(0, 0, 0, 72)
@@ -233,19 +225,12 @@ class PixelUT < Test::Unit::TestCase
     pixel.blue += 20
     assert_equal(-1, @pixel <=> pixel)
 
-    @pixel.opacity = 100
-    pixel = @pixel.dup
-    pixel.opacity -= 10
-    assert_equal(1, @pixel <=> pixel)
-    pixel.opacity += 20
-    assert_equal(-1, @pixel <=> pixel)
-
     @pixel.alpha = 100
     pixel = @pixel.dup
     pixel.alpha -= 10
-    assert_equal(-1, @pixel <=> pixel)
-    pixel.alpha += 20
     assert_equal(1, @pixel <=> pixel)
+    pixel.alpha += 20
+    assert_equal(-1, @pixel <=> pixel)
   end
 
   def test_to_color
@@ -269,6 +254,6 @@ class PixelUT < Test::Unit::TestCase
   end
 
   def test_to_s
-    assert_match(/red=\d+, green=\d+, blue=\d+, opacity=\d+/, @pixel.to_s)
+    assert_match(/red=\d+, green=\d+, blue=\d+, alpha=\d+/, @pixel.to_s)
   end
 end

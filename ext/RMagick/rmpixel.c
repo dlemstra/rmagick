@@ -127,26 +127,6 @@ Pixel_alpha(VALUE self)
     return C_int_to_R_int(QuantumRange - pixel->opacity);
 }
 
-
-/**
- * Get Pixel opacity attribute.
- *
- * Ruby usage:
- *   - @verbatim Pixel#opacity @endverbatim
- *
- * @param self this object
- * @return the opacity value
- * @deprecated This method has been deprecated. Please use Pixel_alpha.
- */
-VALUE
-Pixel_opacity(VALUE self)
-{
-    Pixel *pixel;
-    rb_warning("Pixel#opacity is deprecated; use Pixel#alpha.");
-    Data_Get_Struct(self, Pixel, pixel);
-    return C_int_to_R_int(pixel->opacity);
-}
-
 /**
  * Set Pixel red attribute.
  *
@@ -224,37 +204,6 @@ Pixel_alpha_eq(VALUE self, VALUE v)
     (void) rb_funcall(self, rm_ID_changed, 0);
     (void) rb_funcall(self, rm_ID_notify_observers, 1, self);
     return QUANTUM2NUM(QuantumRange - pixel->opacity);
-}
-
-
-/**
- * Set Pixel opacity attribute.
- *
- * Ruby usage:
- *   - @verbatim Pixel#opacity= @endverbatim
- *
- * Notes:
- *   - Pixel is Observable. Setters call changed, notify_observers
- *   - Setters return their argument values for backward compatibility to when
- *     Pixel was a Struct class.
- *
- * @param self this object
- * @param v the opacity value
- * @return self
- * @deprecated This method has been deprecated. Please use Pixel_alpha_eq.
- */
-VALUE
-Pixel_opacity_eq(VALUE self, VALUE v)
-{
-    Pixel *pixel;
-
-    rb_warning("Pixel#opacity= is deprecated; use Pixel#alpha=.");
-    rb_check_frozen(self);
-    Data_Get_Struct(self, Pixel, pixel);
-    pixel->opacity = APP2QUANTUM(v);
-    (void) rb_funcall(self, rm_ID_changed, 0);
-    (void) rb_funcall(self, rm_ID_notify_observers, 1, self);
-    return QUANTUM2NUM(pixel->opacity);
 }
 
 /*
@@ -762,7 +711,7 @@ Pixel_hash(VALUE self)
     hash  = ScaleQuantumToChar(pixel->red)   << 24;
     hash += ScaleQuantumToChar(pixel->green) << 16;
     hash += ScaleQuantumToChar(pixel->blue)  << 8;
-    hash += ScaleQuantumToChar(pixel->opacity);
+    hash += ScaleQuantumToChar(QuantumRange - pixel->opacity);
 
     return UINT2NUM(hash >> 1);
 }
@@ -962,7 +911,7 @@ Pixel_spaceship(VALUE self, VALUE other)
     }
     else if(this->opacity != that->opacity)
     {
-        return INT2NUM((this->opacity - that->opacity)/abs(this->opacity - that->opacity));
+        return INT2NUM(((QuantumRange - this->opacity) - (QuantumRange - that->opacity))/abs((QuantumRange - this->opacity) - (QuantumRange - that->opacity)));
     }
 
     // Values are equal, check class.
@@ -1169,8 +1118,13 @@ Pixel_to_s(VALUE self)
     char buff[100];
 
     Data_Get_Struct(self, Pixel, pixel);
-    sprintf(buff, "red=" QuantumFormat ", green=" QuantumFormat ", blue=" QuantumFormat ", opacity=" QuantumFormat
-          , pixel->red, pixel->green, pixel->blue, pixel->opacity);
+    sprintf(buff, "red=" QuantumFormat ", green=" QuantumFormat ", blue=" QuantumFormat ", alpha=" QuantumFormat,
+            pixel->red, pixel->green, pixel->blue,
+#if defined(IMAGEMAGICK_7)
+            pixel->alpha);
+#else
+            (QuantumRange - pixel->opacity));
+#endif
     return rb_str_new2(buff);
 }
 
