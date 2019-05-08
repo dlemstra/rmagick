@@ -371,8 +371,7 @@ Image_adaptive_threshold(int argc, VALUE *argv, VALUE self)
 VALUE
 Image_add_compose_mask(VALUE self, VALUE mask)
 {
-    Image *image;
-    Image *mask_image = NULL;
+    Image *image, *mask_image = NULL;
 
     image = rm_check_frozen(self);
     mask_image = rm_check_destroyed(mask);
@@ -2015,7 +2014,7 @@ Image_bounding_box(VALUE self)
 VALUE
 Image_capture(int argc, VALUE *argv, VALUE self ATTRIBUTE_UNUSED)
 {
-    Image *image;
+    Image *new_image;
     ImageInfo *image_info;
     VALUE info_obj;
     XImportInfo ximage_info;
@@ -2049,15 +2048,15 @@ Image_capture(int argc, VALUE *argv, VALUE self ATTRIBUTE_UNUSED)
     Data_Get_Struct(info_obj, Info, image_info);
 
     // If an error occurs, IM will call our error handler and we raise an exception.
-    image = XImportImage(image_info, &ximage_info);
-    rm_check_image_exception(image, DestroyOnError);
-    rm_ensure_result(image);
+    new_image = XImportImage(image_info, &ximage_info);
+    rm_check_image_exception(new_image, DestroyOnError);
+    rm_ensure_result(new_image);
 
-    rm_set_user_artifact(image, image_info);
+    rm_set_user_artifact(new_image, image_info);
 
     RB_GC_GUARD(info_obj);
 
-    return rm_image_new(image);
+    return rm_image_new(new_image);
 }
 
 
@@ -3211,12 +3210,7 @@ Image_compare_channel(int argc, VALUE *argv, VALUE self)
     VALUE_TO_ENUM(argv[1], metric_type, MetricType);
 
     exception = AcquireExceptionInfo();
-    difference_image = CompareImageChannels(image
-                                            , r_image
-                                            , channels
-                                            , metric_type
-                                            , &distortion
-                                            , exception);
+    difference_image = CompareImageChannels(image, r_image, channels, metric_type, &distortion, exception);
     rm_check_exception(exception, difference_image, DestroyOnError);
 
     (void) DestroyExceptionInfo(exception);
@@ -4598,7 +4592,7 @@ Image_decipher(VALUE self, VALUE passphrase)
         rb_raise(rb_eRuntimeError, "DecipherImage failed for unknown reason.");
     }
 
-    DestroyExceptionInfo(exception);
+    (void) DestroyExceptionInfo(exception);
 
     return rm_image_new(new_image);
 }
@@ -5342,8 +5336,7 @@ Image_distortion_channel(int argc, VALUE *argv, VALUE self)
     reconstruct = rm_check_destroyed(rec);
     VALUE_TO_ENUM(argv[1], metric, MetricType);
     exception = AcquireExceptionInfo();
-    (void) GetImageChannelDistortion(image, reconstruct, channels
-                                     , metric, &distortion, exception);
+    (void) GetImageChannelDistortion(image, reconstruct, channels, metric, &distortion, exception);
     CHECK_EXCEPTION()
 
     (void) DestroyExceptionInfo(exception);
@@ -5654,7 +5647,7 @@ Image_encipher(VALUE self, VALUE passphrase)
     rm_check_exception(exception, new_image, DestroyOnError);
     if (!okay)
     {
-        new_image = DestroyImage(new_image);
+        (void) DestroyImage(new_image);
         rb_raise(rb_eRuntimeError, "EncipherImage failed for unknown reason.");
     }
 
@@ -9627,7 +9620,6 @@ Image_opaque_channel(int argc, VALUE *argv, VALUE self)
 
     okay = OpaquePaintImageChannel(new_image, channels, &target_pp, &fill_pp, invert);
 
-    // Restore saved fuzz value
     new_image->fuzz = keep;
     rm_check_image_exception(new_image, DestroyOnError);
 
@@ -10863,7 +10855,6 @@ Image_recolor(VALUE self, VALUE color_matrix)
 
     order = (unsigned long)sqrt((double)(len + 1.0));
 
-    // RecolorImage sets the ExceptionInfo and returns a NULL image if an error occurs.
     kernel_info = AcquireKernelInfo(NULL);
     if (kernel_info == (KernelInfo *) NULL)
     {
@@ -12013,8 +12004,7 @@ Image_properties(VALUE self)
     Image *image;
     VALUE attr_hash;
     VALUE ary;
-    char *property;
-    const char *value;
+    const char *property, *value;
 
     image = rm_check_destroyed(self);
 
