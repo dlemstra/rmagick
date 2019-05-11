@@ -1233,7 +1233,7 @@ Image_black_point_compensation_eq(VALUE self, VALUE arg)
  *   - @verbatim Image#black_threshold(red_channel) @endverbatim
  *   - @verbatim Image#black_threshold(red_channel, green_channel) @endverbatim
  *   - @verbatim Image#black_threshold(red_channel, green_channel, blue_channel) @endverbatim
- *   - @verbatim Image#black_threshold(red_channel, green_channel, blue_channel, opacity_channel) @endverbatim
+ *   - @verbatim Image#black_threshold(red_channel, green_channel, blue_channel, alpha_channel) @endverbatim
  *
  * @param argc number of input arguments
  * @param argv array of input arguments
@@ -8463,22 +8463,22 @@ Image_matte_color_eq(VALUE self, VALUE color)
  * Call MatteFloodFillImage.
  *
  * Ruby usage:
- *   - @verbatim Image#matte_flood_fill(color, opacity, x, y, method_obj) @endverbatim
+ *   - @verbatim Image#matte_flood_fill(color, alpha, x, y, method_obj) @endverbatim
  *
  * @param self this object
  * @param color the color
- * @param opacity the opacity
+ * @param alpha the alpha
  * @param x_obj x position
  * @param y_obj y position
  * @param method_obj which method to call: FloodfillMethod or FillToBorderMethod
  * @return a new image
  */
 VALUE
-Image_matte_flood_fill(VALUE self, VALUE color, VALUE opacity, VALUE x_obj, VALUE y_obj, VALUE method_obj)
+Image_matte_flood_fill(VALUE self, VALUE color, VALUE alpha, VALUE x_obj, VALUE y_obj, VALUE method_obj)
 {
     Image *image, *new_image;
     PixelColor target;
-    Quantum op;
+    Quantum alpha_val;
     long x, y;
     PaintMethod method;
     DrawInfo *draw_info;
@@ -8488,7 +8488,7 @@ Image_matte_flood_fill(VALUE self, VALUE color, VALUE opacity, VALUE x_obj, VALU
     image = rm_check_destroyed(self);
     Color_to_PixelColor(&target, color);
 
-    op = APP2QUANTUM(opacity);
+    alpha_val = APP2QUANTUM(alpha);
 
     VALUE_TO_ENUM(method_obj, method, PaintMethod);
     if (!(method == FloodfillMethod || method == FillToBorderMethod))
@@ -8513,7 +8513,7 @@ Image_matte_flood_fill(VALUE self, VALUE color, VALUE opacity, VALUE x_obj, VALU
     {
         rb_raise(rb_eNoMemError, "not enough memory to continue");
     }
-    draw_info->fill.opacity = op;
+    draw_info->fill.opacity = QuantumRange - alpha_val;
 
     if (method == FillToBorderMethod)
     {
@@ -9391,8 +9391,8 @@ Image_opaque_channel(int argc, VALUE *argv, VALUE self)
 
 
 /**
- * Return true if any of the pixels in the image have an opacity value other
- * than opaque ( 0 ).
+ * Return true if any of the pixels in the image have an alpha value other
+ * than opaque.
  *
  * Ruby usage:
  *   - @verbatim Image#opaque? @endverbatim
@@ -9556,12 +9556,12 @@ Image_page_eq(VALUE self, VALUE rect)
  *
  * Ruby usage:
  *   - @verbatim Image#paint_transparent(target) @endverbatim
- *   - @verbatim Image#paint_transparent(target, opacity) @endverbatim
- *   - @verbatim Image#paint_transparent(target, opacity, invert) @endverbatim
- *   - @verbatim Image#paint_transparent(target, opacity, invert, fuzz) @endverbatim
+ *   - @verbatim Image#paint_transparent(target, alpha) @endverbatim
+ *   - @verbatim Image#paint_transparent(target, alpha, invert) @endverbatim
+ *   - @verbatim Image#paint_transparent(target, alpha, invert, fuzz) @endverbatim
  *
  * Notes:
- *   - Default opacity is TransparentOpacity
+ *   - Default alpha is TransparentAlpha
  *   - Default invert is false
  *   - Default fuzz is the image's fuzz (see Image_fuzz_eq)
  *
@@ -9575,7 +9575,7 @@ Image_paint_transparent(int argc, VALUE *argv, VALUE self)
 {
     Image *image, *new_image;
     MagickPixel color;
-    Quantum opacity = TransparentOpacity;
+    Quantum alpha = TransparentAlpha;
     double keep, fuzz;
     MagickBooleanType okay, invert = MagickFalse;
 
@@ -9591,7 +9591,7 @@ Image_paint_transparent(int argc, VALUE *argv, VALUE self)
         case 3:
             invert = RTEST(argv[2]);
         case 2:
-            opacity = APP2QUANTUM(argv[1]);
+            alpha = APP2QUANTUM(argv[1]);
         case 1:
             Color_to_MagickPixel(image, &color, argv[0]);
             break;
@@ -9606,7 +9606,7 @@ Image_paint_transparent(int argc, VALUE *argv, VALUE self)
     keep = new_image->fuzz;
     new_image->fuzz = fuzz;
 
-    okay = TransparentPaintImage(new_image, (const MagickPixel *)&color, opacity, invert);
+    okay = TransparentPaintImage(new_image, (const MagickPixel *)&color, QuantumRange - alpha, invert);
     new_image->fuzz = keep;
 
     // Is it possible for TransparentPaintImage to silently fail?
@@ -11835,7 +11835,7 @@ Image_shade(int argc, VALUE *argv, VALUE self)
 
 
 /**
- * Call ShadowImage. X- and y-offsets are the pixel offset. Opacity is either a
+ * Call ShadowImage. X- and y-offsets are the pixel offset. Alpha is either a
  * number between 0 and 1 or a string "NN%". Sigma is the std. dev. of the
  * Gaussian, in pixels.
  *
@@ -11844,14 +11844,14 @@ Image_shade(int argc, VALUE *argv, VALUE self)
  *   - @verbatim Image#shadow(x_offset) @endverbatim
  *   - @verbatim Image#shadow(x_offset, y_offset) @endverbatim
  *   - @verbatim Image#shadow(x_offset, y_offset, sigma) @endverbatim
- *   - @verbatim Image#shadow(x_offset, y_offset, sigma, opacity) @endverbatim
+ *   - @verbatim Image#shadow(x_offset, y_offset, sigma, alpha) @endverbatim
  *
  * Notes:
  *   - Default x_offset is 4
  *   - Default y_offset is 4
  *   - Default sigma is 4.0
- *   - Default opacity is 1.0
- *   - The defaults are taken from the mogrify.c source, except for opacity,
+ *   - Default alpha is 0.0
+ *   - The defaults are taken from the mogrify.c source, except for alpha,
  *     which has no default.
  *   - Introduced in ImageMagick 6.1.7
  *
@@ -11864,7 +11864,7 @@ VALUE
 Image_shadow(int argc, VALUE *argv, VALUE self)
 {
     Image *image, *new_image;
-    double opacity = 100.0;
+    double alpha = 100.0;
     double sigma = 4.0;
     long x_offset = 4L;
     long y_offset = 4L;
@@ -11874,14 +11874,14 @@ Image_shadow(int argc, VALUE *argv, VALUE self)
     switch (argc)
     {
         case 4:
-            opacity = rm_percentage(argv[3],1.0);   // Clamp to 1.0 < x <= 100.0
-            if (fabs(opacity) < 0.01)
+            alpha = rm_percentage(argv[3],1.0);   // Clamp to 1.0 < x <= 100.0
+            if (fabs(alpha) < 0.01)
             {
-                rb_warning("shadow will be transparent - opacity %g very small", opacity);
+                rb_warning("shadow will be transparent - alpha %g very small", alpha);
             }
-            opacity = FMIN(opacity, 1.0);
-            opacity = FMAX(opacity, 0.01);
-            opacity *= 100.0;
+            alpha = FMIN(alpha, 1.0);
+            alpha = FMAX(alpha, 0.01);
+            alpha *= 100.0;
         case 3:
             sigma = NUM2DBL(argv[2]);
         case 2:
@@ -11896,7 +11896,7 @@ Image_shadow(int argc, VALUE *argv, VALUE self)
     }
 
     exception = AcquireExceptionInfo();
-    new_image = ShadowImage(image, opacity, sigma, x_offset, y_offset, exception);
+    new_image = ShadowImage(image, alpha, sigma, x_offset, y_offset, exception);
     rm_check_exception(exception, new_image, DestroyOnError);
 
     (void) DestroyExceptionInfo(exception);
@@ -12970,7 +12970,7 @@ static
 VALUE threshold_image(int argc, VALUE *argv, VALUE self, thresholder_t thresholder)
 {
     Image *image, *new_image;
-    double red, green, blue, opacity;
+    double red, green, blue, alpha;
     char ctarg[200];
 
     image = rm_check_destroyed(self);
@@ -12981,8 +12981,8 @@ VALUE threshold_image(int argc, VALUE *argv, VALUE self, thresholder_t threshold
             red     = NUM2DBL(argv[0]);
             green   = NUM2DBL(argv[1]);
             blue    = NUM2DBL(argv[2]);
-            opacity = NUM2DBL(argv[3]);
-            sprintf(ctarg, "%f,%f,%f,%f", red, green, blue, opacity);
+            alpha   = NUM2DBL(argv[3]);
+            sprintf(ctarg, "%f,%f,%f,%f", red, green, blue, QuantumRange - alpha);
             break;
         case 3:
             red     = NUM2DBL(argv[0]);
@@ -13171,16 +13171,16 @@ Image_ticks_per_second_eq(VALUE self, VALUE tps)
  * Call TintImage.
  *
  * Ruby usage:
- *   - @verbatim Image#tint(tint, red_opacity) @endverbatim
- *   - @verbatim Image#tint(tint, red_opacity, green_opacity) @endverbatim
- *   - @verbatim Image#tint(tint, red_opacity, green_opacity, blue_opacity) @endverbatim
- *   - @verbatim Image#tint(tint, red_opacity, green_opacity, blue_opacity, alpha_opacity) @endverbatim
+ *   - @verbatim Image#tint(tint, red_alpha) @endverbatim
+ *   - @verbatim Image#tint(tint, red_alpha, green_alpha) @endverbatim
+ *   - @verbatim Image#tint(tint, red_alpha, green_alpha, blue_alphay) @endverbatim
+ *   - @verbatim Image#tint(tint, red_alpha, green_alpha, blue_alphay, alpha) @endverbatim
  *
  * Notes:
- *   - Default green_opacity is red_opacity
- *   - Default blue_opacity is red_opacity
- *   - Default alpha_opacity is 1.0
- *   - Opacity values are percentages: 0.10 -> 10%.
+ *   - Default green_alpha is red_alpha
+ *   - Default blue_alpha is red_alpha
+ *   - Default alpha_alpha is 1.0
+ *   - Alpha values are percentages: 0.10 -> 10%.
  *
  * @param argc number of input arguments
  * @param argv array of input arguments
@@ -13194,7 +13194,7 @@ Image_tint(int argc, VALUE *argv, VALUE self)
     PixelColor tint;
     double red_pct_opaque, green_pct_opaque, blue_pct_opaque;
     double alpha_pct_opaque = 1.0;
-    char opacity[50];
+    char alpha[50];
     ExceptionInfo *exception;
 
     image = rm_check_destroyed(self);
@@ -13229,17 +13229,17 @@ Image_tint(int argc, VALUE *argv, VALUE self)
     if (red_pct_opaque < 0.0 || green_pct_opaque < 0.0
         || blue_pct_opaque < 0.0 || alpha_pct_opaque < 0.0)
     {
-        rb_raise(rb_eArgError, "opacity percentages must be non-negative.");
+        rb_raise(rb_eArgError, "alpha percentages must be non-negative.");
     }
 
-    snprintf(opacity, sizeof(opacity),
+    snprintf(alpha, sizeof(alpha),
             "%g,%g,%g,%g", red_pct_opaque*100.0, green_pct_opaque*100.0
             , blue_pct_opaque*100.0, alpha_pct_opaque*100.0);
 
     Color_to_PixelColor(&tint, argv[0]);
     exception = AcquireExceptionInfo();
 
-    new_image = TintImage(image, opacity, tint, exception);
+    new_image = TintImage(image, alpha, tint, exception);
     rm_check_exception(exception, new_image, DestroyOnError);
 
     (void) DestroyExceptionInfo(exception);
@@ -13432,13 +13432,13 @@ Image_total_ink_density(VALUE self)
  *
  * Ruby usage:
  *   - @verbatim Image#transparent(color-name) @endverbatim
- *   - @verbatim Image#transparent(color-name, opacity) @endverbatim
+ *   - @verbatim Image#transparent(color-name, alpha) @endverbatim
  *   - @verbatim Image#transparent(pixel) @endverbatim
- *   - @verbatim Image#transparent(pixel, opacity) @endverbatim
+ *   - @verbatim Image#transparent(pixel, alpha) @endverbatim
  *
  * Notes:
- *   - Default opacity is Magick::TransparentOpacity.
- *   - Can use Magick::OpaqueOpacity or Magick::TransparentOpacity, or any
+ *   - Default alpha is Magick::TransparentAlpha.
+ *   - Can use Magick::OpaqueAlpha or Magick::TransparentAlpha, or any
  *     value >= 0 && <= QuantumRange.
  *   - Use Image#fuzz= to define the tolerance level.
  *
@@ -13452,7 +13452,7 @@ Image_transparent(int argc, VALUE *argv, VALUE self)
 {
     Image *image, *new_image;
     MagickPixel color;
-    Quantum opacity = TransparentOpacity;
+    Quantum alpha = TransparentAlpha;
     MagickBooleanType okay;
 
     image = rm_check_destroyed(self);
@@ -13460,7 +13460,7 @@ Image_transparent(int argc, VALUE *argv, VALUE self)
     switch (argc)
     {
         case 2:
-            opacity = APP2QUANTUM(argv[1]);
+            alpha = APP2QUANTUM(argv[1]);
         case 1:
             Color_to_MagickPixel(image, &color, argv[0]);
             break;
@@ -13471,7 +13471,7 @@ Image_transparent(int argc, VALUE *argv, VALUE self)
 
     new_image = rm_clone_image(image);
 
-    okay = TransparentPaintImage(new_image, &color, opacity, MagickFalse);
+    okay = TransparentPaintImage(new_image, &color, QuantumRange - alpha, MagickFalse);
     rm_check_image_exception(new_image, DestroyOnError);
     if (!okay)
     {
@@ -13489,11 +13489,11 @@ Image_transparent(int argc, VALUE *argv, VALUE self)
  *
  * Ruby usage:
  *   - @verbatim Image#transparent_chroma(low, high) @endverbatim
- *   - @verbatim Image#transparent_chroma(low, high, opacity) @endverbatim
- *   - @verbatim Image#transparent_chroma(low, high, opacity, invert) @endverbatim
+ *   - @verbatim Image#transparent_chroma(low, high, alpha) @endverbatim
+ *   - @verbatim Image#transparent_chroma(low, high, alpha, invert) @endverbatim
  *
  * Notes:
- *   - Default opacity is TransparentOpacity
+ *   - Default alpha is TransparentAlpha
  *   - Default invert is false
  *   - Available in ImageMagick >= 6.4.5-6
  *
@@ -13506,7 +13506,7 @@ VALUE
 Image_transparent_chroma(int argc, VALUE *argv, VALUE self)
 {
     Image *image, *new_image;
-    Quantum opacity = TransparentOpacity;
+    Quantum alpha = TransparentAlpha;
     MagickPixel low, high;
     MagickBooleanType invert = MagickFalse;
     MagickBooleanType okay;
@@ -13518,7 +13518,7 @@ Image_transparent_chroma(int argc, VALUE *argv, VALUE self)
         case 4:
             invert = RTEST(argv[3]);
         case 3:
-            opacity = APP2QUANTUM(argv[2]);
+            alpha = APP2QUANTUM(argv[2]);
         case 2:
             Color_to_MagickPixel(image, &high, argv[1]);
             Color_to_MagickPixel(image, &low, argv[0]);
@@ -13530,7 +13530,7 @@ Image_transparent_chroma(int argc, VALUE *argv, VALUE self)
 
     new_image = rm_clone_image(image);
 
-    okay = TransparentPaintImageChroma(new_image, &low, &high, opacity, invert);
+    okay = TransparentPaintImageChroma(new_image, &low, &high, QuantumRange - alpha, invert);
     rm_check_image_exception(new_image, DestroyOnError);
     if (!okay)
     {
@@ -14528,7 +14528,7 @@ Image_wet_floor(int argc, VALUE *argv, VALUE self)
  *   - @verbatim Image#white_threshold(red_channel) @endverbatim
  *   - @verbatim Image#white_threshold(red_channel, green_channel) @endverbatim
  *   - @verbatim Image#white_threshold(red_channel, green_channel, blue_channel) @endverbatim
- *   - @verbatim Image#white_threshold(red_channel, green_channel, blue_channel, opacity_channel) @endverbatim
+ *   - @verbatim Image#white_threshold(red_channel, green_channel, blue_channel, alpha_channel) @endverbatim
  *
  * @param argc number of input arguments
  * @param argv array of input arguments

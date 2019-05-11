@@ -1144,7 +1144,7 @@ class Image2_UT < Test::Unit::TestCase
     Magick::PaintMethod.values do |method|
       next if [Magick::FillToBorderMethod, Magick::FloodfillMethod].include?(method)
 
-      assert_raise(ArgumentError) { @img.matte_flood_fill('blue', Magick::TransparentOpacity, @img.columns, @img.rows, method) }
+      assert_raise(ArgumentError) { @img.matte_flood_fill('blue', Magick::TransparentAlpha, @img.columns, @img.rows, method) }
     end
     assert_raise(ArgumentError) { @img.matte_floodfill(@img.columns + 1, @img.rows) }
     assert_raise(ArgumentError) { @img.matte_floodfill(@img.columns, @img.rows + 1) }
@@ -1332,15 +1332,15 @@ class Image2_UT < Test::Unit::TestCase
     assert_not_nil(res)
     assert_instance_of(Magick::Image, res)
     assert_not_same(res, @img)
-    assert_nothing_raised { @img.paint_transparent('red', Magick::TransparentOpacity) }
-    assert_nothing_raised { @img.paint_transparent('red', Magick::TransparentOpacity, true) }
-    assert_nothing_raised { @img.paint_transparent('red', Magick::TransparentOpacity, true, 50) }
+    assert_nothing_raised { @img.paint_transparent('red', Magick::TransparentAlpha) }
+    assert_nothing_raised { @img.paint_transparent('red', Magick::TransparentAlpha, true) }
+    assert_nothing_raised { @img.paint_transparent('red', Magick::TransparentAlpha, true, 50) }
 
     # Too many arguments
-    assert_raise(ArgumentError) { @img.paint_transparent('red', Magick::TransparentOpacity, true, 50, 50) }
+    assert_raise(ArgumentError) { @img.paint_transparent('red', Magick::TransparentAlpha, true, 50, 50) }
     # Not enough
     assert_raise(ArgumentError) { @img.paint_transparent }
-    assert_raise(TypeError) { @img.paint_transparent('red', Magick::TransparentOpacity, true, []) }
+    assert_raise(TypeError) { @img.paint_transparent('red', Magick::TransparentAlpha, true, []) }
     assert_raise(TypeError) { @img.paint_transparent('red', 'blue') }
     assert_raise(TypeError) { @img.paint_transparent(50) }
   end
