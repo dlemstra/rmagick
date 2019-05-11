@@ -1281,7 +1281,6 @@ get_relative_offsets(VALUE grav, Image *image, Image *mark, long *x_offset, long
         case NorthGravity:
         case SouthGravity:
         case CenterGravity:
-        case StaticGravity:
             *x_offset += (long)(image->columns/2) - (long)(mark->columns/2);
             break;
         default:
@@ -1297,7 +1296,6 @@ get_relative_offsets(VALUE grav, Image *image, Image *mark, long *x_offset, long
         case EastGravity:
         case WestGravity:
         case CenterGravity:
-        case StaticGravity:
             *y_offset += (long)(image->rows/2) - (long)(mark->rows/2);
             break;
         case NorthEastGravity:
@@ -1347,7 +1345,6 @@ get_offsets_from_gravity(GravityType gravity, Image *image, Image *mark
             *x_offset = 0;
             *y_offset = ((long)(image->rows) - (long)(mark->rows)) / 2;
             break;
-        case StaticGravity:
         case CenterGravity:
         default:
             *x_offset = ((long)(image->columns) - (long)(mark->columns)) / 2;
@@ -3182,7 +3179,6 @@ composite(int bang, int argc, VALUE *argv, VALUE self, ChannelType channels)
                     x_offset = 0;
                     y_offset = ((long)(image->rows) - (long)(comp_image->rows)) / 2;
                     break;
-                case StaticGravity:
                 case CenterGravity:
                 default:
                     x_offset = ((long)(image->columns) - (long)(comp_image->columns)) / 2;
@@ -3230,7 +3226,6 @@ composite(int bang, int argc, VALUE *argv, VALUE self, ChannelType channels)
                 case NorthGravity:
                 case SouthGravity:
                 case CenterGravity:
-                case StaticGravity:
                     x_offset += (long)(image->columns/2) - (long)(comp_image->columns/2);
                     break;
                 default:
@@ -3246,7 +3241,6 @@ composite(int bang, int argc, VALUE *argv, VALUE self, ChannelType channels)
                 case EastGravity:
                 case WestGravity:
                 case CenterGravity:
-                case StaticGravity:
                     y_offset += (long)(image->rows/2) - (long)(comp_image->rows/2);
                     break;
                 case NorthEastGravity:
@@ -6057,9 +6051,6 @@ Image_export_pixels_to_str(int argc, VALUE *argv, VALUE self)
         case FloatPixel:
             sz = sizeof(float);
             break;
-        case IntegerPixel:
-            sz = sizeof(unsigned int);
-            break;
         case LongPixel:
             sz = sizeof(unsigned long);
             break;
@@ -7280,9 +7271,6 @@ Image_import_pixels(int argc, VALUE *argv, VALUE self)
                 break;
             case ShortPixel:
                 type_sz = sizeof(unsigned short);
-                break;
-            case IntegerPixel:
-                type_sz = sizeof(unsigned int);
                 break;
             case LongPixel:
                 type_sz = sizeof(unsigned long);
@@ -14774,7 +14762,6 @@ cropper(int bang, int argc, VALUE *argv, VALUE self)
                 case NorthGravity:
                 case SouthGravity:
                 case CenterGravity:
-                case StaticGravity:
                     nx += image->columns/2 - columns/2;
                     break;
                 default:
@@ -14790,7 +14777,6 @@ cropper(int bang, int argc, VALUE *argv, VALUE self)
                 case EastGravity:
                 case WestGravity:
                 case CenterGravity:
-                case StaticGravity:
                     ny += image->rows/2 - rows/2;
                     break;
                 case NorthEastGravity:
@@ -14856,7 +14842,6 @@ cropper(int bang, int argc, VALUE *argv, VALUE self)
                     nx = image->columns - columns;
                     ny = image->rows - rows;
                     break;
-                case StaticGravity:
                 case CenterGravity:
                     nx = (image->columns - columns) / 2;
                     ny = (image->rows - rows) / 2;
